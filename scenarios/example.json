@@ -1,0 +1,13 @@
+{
+  "meta": { "name": "Example greenhouse", "created": "2026-01-20T00:00:00Z" },
+  "config": {
+    "greenhouseHeight_m": 2.0,
+    "barrels": [
+      { "height_m": 1.4, "volume_L": 220, "pos": { "x_m": 0.5, "y_m": 0.5 }, "floatEnabled": true, "floatSetpoint": 0.95 },
+      { "height_m": 1.4, "volume_L": 220, "pos": { "x_m": 1.5, "y_m": 0.5 }, "floatEnabled": true, "floatSetpoint": 0.95 }
+    ],
+    "pipe_diameter_m": 0.0127,
+    "seasonal_rain_mmph": { "spring": 0.5, "summer": 1.0, "fall": 0.8, "winter": 0.5 }
+  },
+  "runtime": { "barrels": [ { "level_m": 0.2 }, { "level_m": 0.1 } ] }
+}

@@ -1,3 +1,51 @@
+// TypeScript interfaces for type safety
+export interface Barrel {
+  height_m: number;
+  volume_L: number;
+  radius_m: number;
+  floatEnabled?: boolean;
+  floatSetpoint?: number;
+  pos: { x_m: number; y_m: number };
+}
+
+export interface BarrelRuntime {
+  level_m: number;
+  pos: { x_m: number; y_m: number };
+  frozen?: boolean;
+}
+
+export interface Config {
+  greenhouseHeight_m: number;
+  barrels: Barrel[];
+  pipe_diameter_m: number;
+  panels: Array<{ w_m: number; h_m: number; countNorth: number; countSouth: number }>;
+  seasonal_rain_mmph: { [season: string]: number };
+  seasons?: Seasons;
+  meta?: Record<string, any>;
+}
+
+export interface Seasons {
+  rain_mm_per_hr: number;
+}
+
+export interface Template {
+  id: string;
+  name: string;
+}
+
+export interface Simulator {
+  config: Config;
+  barrels: BarrelRuntime[];
+  startTime: number;
+  currentTime: number;
+  timeScale: number;
+  running: boolean;
+  onUpdate?: (s: Simulator) => void;
+  onConfigChanged?: () => void;
+  setTimeScale: (v: number) => void;
+  set onUpdate(fn: (s: Simulator) => void);
+  set running(v: boolean);
+}
 const g = 9.80665
 const rho = 1000 // water kg/m3
 
@@ -26,7 +74,7 @@ export function createSimulator(config: any){
   }
 
   // initialize barrel levels and positions
-  state.barrels = state.config.barrels.map((b:any)=>({ level_m: 0, pos: { x_m: b.pos?.x_m || 0, y_m: b.pos?.y_m || 0 } }))
+  state.barrels = state.config.barrels.map((b:any)=>({ level_m: 0, pos: { x_m: b.pos?.x_m || 0, y_m: b.pos?.y_m || 0 }, frozen: false }))
 
   function orificeFlow_m3s(area_m2:number, head_m:number, Cd=0.6){
     if(head_m<=0) return 0
@@ -68,9 +116,12 @@ export function createSimulator(config: any){
       const barrelArea = Math.PI * Math.pow(cb.radius_m,2)
       // inflow goes only to barrel 0 for now
       const myInflow = i===0 ? inflow : 0
-      const dV = (myInflow - outflow) * (dt_ms/1000)
-      const dH = dV / barrelArea
-      state.barrels[i].level_m = Math.max(0, state.barrels[i].level_m + dH)
+      // skip updating level if frozen (user dragging or animating)
+      if(!state.barrels[i].frozen){
+        const dV = (myInflow - outflow) * (dt_ms/1000)
+        const dH = dV / barrelArea
+        state.barrels[i].level_m = Math.max(0, state.barrels[i].level_m + dH)
+      }
       // keep barrel position synchronized with config when edited in plan mode
       state.barrels[i].pos = { x_m: state.config.barrels[i].pos?.x_m ?? state.barrels[i].pos.x_m, y_m: state.config.barrels[i].pos?.y_m ?? state.barrels[i].pos.y_m }
     }

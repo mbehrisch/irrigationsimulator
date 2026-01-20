@@ -20,7 +20,27 @@ export default function Canvas2D({simulator, onSelect, perspective = 'side', mod
     const ctx = canvas.getContext('2d')!
     let raf:number
 
+    function resizeIfNeeded(){
+      const rect = canvas.getBoundingClientRect()
+      const dpr = window.devicePixelRatio || 1
+      const cssW = Math.max(100, Math.floor(rect.width))
+      const cssH = Math.max(100, Math.floor(rect.height))
+      const pxW = Math.round(cssW * dpr)
+      const pxH = Math.round(cssH * dpr)
+      if(canvas.width !== pxW || canvas.height !== pxH){
+        canvas.width = pxW
+        canvas.height = pxH
+        canvas.style.width = cssW + 'px'
+        canvas.style.height = cssH + 'px'
+        // reset any transforms and scale to devicePixelRatio
+        ctx.setTransform(1,0,0,1,0,0)
+        ctx.scale(dpr, dpr)
+      }
+        return { cssW, cssH, dpr }
+    }
+
     function draw(){
+      resizeIfNeeded()
       ctx.clearRect(0,0,canvas.width,canvas.height)
       ctx.fillStyle = '#dfeff6'
       ctx.fillRect(0, canvas.height-80, canvas.width, 80)
@@ -45,6 +65,7 @@ export default function Canvas2D({simulator, onSelect, perspective = 'side', mod
           const level = simulator.barrels[i]?.level_m || 0
           const levelRatio = Math.min(1, level / b.height_m)
           const levelH = barrelMaxH * levelRatio
+        const { cssW, cssH, dpr } = resizeIfNeeded()
 
           // barrel outline
           ctx.fillStyle = '#c8e6ff'
@@ -70,15 +91,14 @@ export default function Canvas2D({simulator, onSelect, perspective = 'side', mod
         ctx.lineTo(canvas.width-40, baseY-20)
         ctx.stroke()
       } else {
-        // top-down view: map positions (meters) to canvas coordinates
+        const { cssW, cssH } = resizeIfNeeded()
         const areaW = 6.0 // meters width for mapping (example)
         const areaH = 3.0 // meters depth
         const pad = 40
-        const mapX = (xm:number) => pad + (xm / areaW) * (canvas.width - pad*2)
-        const mapY = (ym:number) => pad + (ym / areaH) * (canvas.height - pad*2 - 80)
+        const mapX = (xm:number) => pad + (xm / areaW) * (cssW - pad*2)
+        const mapY = (ym:number) => pad + (ym / areaH) * (cssH - pad*2 - 80)
 
         for(let i=0;i<barrels.length;i++){
-          const b = barrels[i]
           const pos = simulator.barrels[i]?.pos || { x_m:0, y_m:0 }
           const cx = mapX(pos.x_m)
           const cy = mapY(pos.y_m)
@@ -98,8 +118,13 @@ export default function Canvas2D({simulator, onSelect, perspective = 'side', mod
       }
 
       ctx.fillStyle = '#fff'
-      ctx.font = '12px sans-serif'
-      ctx.fillText(`Barrel levels: ${ (simulator.barrels || []).map((b:any)=>b.level_m.toFixed(2)).join(', ') } m`, 10,20)
+      const dpr = window.devicePixelRatio || 1
+      const fontSize = Math.max(12, Math.round(12 * dpr))
+      ctx.font = `${fontSize}px sans-serif`
+      ctx.textBaseline = 'top'
+      const textX = Math.round(10)
+      const textY = Math.round(10)
+      ctx.fillText(`Barrel levels: ${ (simulator.barrels || []).map((b:any)=>b.level_m.toFixed(2)).join(', ') } m`, textX, textY)
 
       raf = requestAnimationFrame(draw)
     }
@@ -143,7 +168,10 @@ export default function Canvas2D({simulator, onSelect, perspective = 'side', mod
         const cx = pad + (pos.x_m / areaW) * (canvas.width - pad*2)
         const cy = pad + (pos.y_m / areaH) * (canvas.height - pad*2 - 80)
         dragging.current = { idx, offsetX: p.x - cx, offsetY: p.y - cy }
-        (canvas as HTMLCanvasElement).setPointerCapture(ev.pointerId)
+        // freeze barrel physics while dragging to prevent visual jumps
+        const sb = simulator.barrels?.[idx]
+        if(sb) sb.frozen = true
+        try{ (canvas as any).setPointerCapture?.(ev.pointerId) }catch(e){}
       }
     }
     function onPointerMove(ev:PointerEvent){
@@ -162,7 +190,9 @@ export default function Canvas2D({simulator, onSelect, perspective = 'side', mod
     }
     function onPointerUp(ev:PointerEvent){
       if(dragging.current){
-        (canvas as HTMLCanvasElement).releasePointerCapture(ev.pointerId)
+        const sb2 = simulator.barrels?.[dragging.current.idx]
+        if(sb2) sb2.frozen = false
+        try{ (canvas as any).releasePointerCapture?.(ev.pointerId) }catch(e){}
         dragging.current = null
       }
     }
@@ -180,9 +210,7 @@ export default function Canvas2D({simulator, onSelect, perspective = 'side', mod
     <div className="canvas" style={{flex:1}}>
       <canvas
         ref={ref}
-        width={800}
-        height={400}
-        style={{width:'100%'}}
+        style={{width:'100%', height:'100%'}}
         onClick={(e)=>{
           const len = simulator.config.barrels.length
           selectedIdx.current = (selectedIdx.current + 1) % Math.max(1,len)
