@@ -1,0 +1,8 @@
+installation:
+  version: 6.0.0-alpha.23
+  installDate: 2026-01-20T06:30:53.330Z
+  lastUpdated: 2026-01-20T06:30:53.330Z
+modules:
+  - core
+ides:
+  - github-copilot

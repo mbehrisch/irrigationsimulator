@@ -1,0 +1,18 @@
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root{--bg:#0f1720;--panel:#071124;--accent:#22c1c3;--text:#e6eef6}
+body{margin:0;font-family:Inter,system-ui,Arial;background:var(--bg);color:var(--text)}
+.app header{padding:12px 16px;display:flex;justify-content:space-between;align-items:center}
+.app header h1{margin:0;font-size:18px}
+.controls{display:flex;gap:12px;align-items:center}
+main{display:flex;gap:12px;padding:12px}
+.canvas{background:#081426;border-radius:8px;padding:12px;flex:1}
+.editor{width:340px;background:linear-gradient(180deg,#071124,#02101a);color:#dbeafe;padding:12px;border-radius:8px}
+.timestamps{font-size:12px;color:#a8bfd1}
+
+.btn{background:var(--accent);color:#022; padding:6px 10px;border-radius:6px;border:none}
+.input{background:#07182a;color:#dbeafe;padding:6px;border-radius:6px;border:1px solid #123}
+
